@@ -43,10 +43,13 @@ namespace Bloxstrap.UI.Elements.Bootstrapper
         {
             InitializeComponent();
 
-            this.buttonCancel.Text = Resources.Strings.Common_Cancel;
+            this.buttonCancel.Text = Strings.Common_Cancel;
 
             ScaleWindow();
             SetupDialog();
+
+            this.ProgressBar.RightToLeft = this.RightToLeft;
+            this.ProgressBar.RightToLeftLayout = this.RightToLeftLayout;
         }
 
         private void LegacyDialog2008_Load(object sender, EventArgs e)

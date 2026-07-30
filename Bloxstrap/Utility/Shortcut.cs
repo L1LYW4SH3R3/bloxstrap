@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using Bloxstrap.Resources;
 
 namespace Bloxstrap.Utility
 {
@@ -20,7 +21,7 @@ namespace Bloxstrap.Utility
                 if (_loadStatus != GenericTriState.Successful)
                     _loadStatus = GenericTriState.Successful;
             }
-            catch (FileNotFoundException ex)
+            catch (Exception ex)
             {
                 App.Logger.WriteLine(LOG_IDENT, $"Failed to create a shortcut for {lnkPath}!");
                 App.Logger.WriteException(LOG_IDENT, ex);
@@ -30,10 +31,7 @@ namespace Bloxstrap.Utility
 
                 _loadStatus = GenericTriState.Failed;
 
-                Frontend.ShowMessageBox(
-                    $"{App.ProjectName} was unable to create shortcuts for the Desktop and Start menu. They will be created the next time Roblox is launched.",
-                    MessageBoxImage.Information
-                );
+                Frontend.ShowMessageBox(Strings.Dialog_CannotCreateShortcuts, MessageBoxImage.Warning);
             }
         }
     }

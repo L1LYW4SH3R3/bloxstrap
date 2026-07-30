@@ -25,7 +25,12 @@ namespace Bloxstrap.Utility
             return FromStream(stream);
         }
 
-        private static string Stringify(byte[] hash)
+        public static string FromString(string str)
+        {
+            return FromBytes(Encoding.UTF8.GetBytes(str));
+        }
+
+        public static string Stringify(byte[] hash)
         {
             return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
         }

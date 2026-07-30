@@ -1,18 +1,10 @@
-﻿using System.ComponentModel;
-using System.Security.Principal;
+﻿using Bloxstrap.AppData;
+using System.ComponentModel;
 
 namespace Bloxstrap
 {
     static class Utilities
     {
-        /// <summary>
-        /// Is process running as administrator
-        /// https://stackoverflow.com/a/11660205
-        /// </summary>
-        public static bool IsAdministrator =>
-           new WindowsPrincipal(WindowsIdentity.GetCurrent())
-               .IsInRole(WindowsBuiltInRole.Administrator);
-
         public static void ShellExecute(string website)
         {
             try
@@ -38,6 +30,18 @@ namespace Bloxstrap
             }
         }
 
+        public static Version GetVersionFromString(string version)
+        {
+            if (version.StartsWith('v'))
+                version = version[1..];
+
+            int idx = version.IndexOf('+'); // commit info
+            if (idx != -1)
+                version = version[..idx];
+
+            return new Version(version);
+        }
+
         /// <summary>
         /// 
         /// </summary>
@@ -49,20 +53,47 @@ namespace Bloxstrap
         ///  0: version1 == version2 <br />
         ///  1: version1 &gt; version2
         /// </returns>
-        public static int CompareVersions(string versionStr1, string versionStr2)
+        public static VersionComparison CompareVersions(string versionStr1, string versionStr2)
         {
-            var version1 = new Version(versionStr1.Replace("v", ""));
-            var version2 = new Version(versionStr2.Replace("v", ""));
+            try
+            {
+                var version1 = GetVersionFromString(versionStr1);
+                var version2 = GetVersionFromString(versionStr2);
 
-            return version1.CompareTo(version2);
+                return (VersionComparison)version1.CompareTo(version2);
+            }
+            catch (Exception)
+            {
+                // temporary diagnostic log for the issue described here:
+                // https://github.com/bloxstraplabs/bloxstrap/issues/3193
+                // the problem is that this happens only on upgrade, so my only hope of catching this is bug reports following the next release
+
+                App.Logger.WriteLine("Utilities::CompareVersions", "An exception occurred when comparing versions");
+                App.Logger.WriteLine("Utilities::CompareVersions", $"versionStr1={versionStr1} versionStr2={versionStr2}");
+
+                throw;
+            }
         }
 
-        public static string GetRobloxVersion(bool studio)
+        /// <summary>
+        /// Parses the input version string and prints if fails
+        /// </summary>
+        public static Version? ParseVersionSafe(string versionStr)
         {
-            string versionGuid = studio ? App.State.Prop.StudioVersionGuid : App.State.Prop.PlayerVersionGuid;
-            string fileName = studio ? "RobloxStudioBeta.exe" : "RobloxPlayerBeta.exe";
+            const string LOG_IDENT = "Utilities::ParseVersionSafe";
 
-            string playerLocation = Path.Combine(Paths.Versions, versionGuid, fileName);
+            if (!Version.TryParse(versionStr, out Version? version))
+            {
+                App.Logger.WriteLine(LOG_IDENT, $"Failed to convert {versionStr} to a valid Version type.");
+                return version;
+            }
+
+            return version;
+        }
+
+        public static string GetRobloxVersionStr(IAppData data)
+        {
+            string playerLocation = data.ExecutablePath;
 
             if (!File.Exists(playerLocation))
                 return "";
@@ -73,6 +104,19 @@ namespace Bloxstrap
                 return "";
 
             return versionInfo.ProductVersion.Replace(", ", ".");
+        }
+
+        public static string GetRobloxVersionStr(bool studio)
+        {
+            IAppData data = studio ? new RobloxStudioData() : new RobloxPlayerData();
+
+            return GetRobloxVersionStr(data);
+        }
+
+        public static Version? GetRobloxVersion(IAppData data)
+        {
+            string str = GetRobloxVersionStr(data);
+            return ParseVersionSafe(str);
         }
 
         public static Process[] GetProcessesSafe()
@@ -89,6 +133,25 @@ namespace Bloxstrap
                 App.Logger.WriteException(LOG_IDENT, ex);
                 return Array.Empty<Process>(); // can we retry?
             }
+        }
+
+        public static bool DoesMutexExist(string name)
+        {
+            try
+            {
+                Mutex.OpenExisting(name).Close();
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static void KillBackgroundUpdater()
+        {
+            using EventWaitHandle handle = new EventWaitHandle(false, EventResetMode.AutoReset, "Bloxstrap-BackgroundUpdaterKillEvent");
+            handle.Set();
         }
     }
 }

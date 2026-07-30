@@ -1,5 +1,7 @@
 ﻿using System.Media;
+using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media.Imaging;
 
 using Windows.Win32;
 using Windows.Win32.Foundation;
@@ -14,12 +16,43 @@ namespace Bloxstrap.UI.Elements.Dialogs
     /// </summary>
     public partial class ConnectivityDialog
     {
-        public ConnectivityDialog(string targetName, string description, Exception exception)
+        public ConnectivityDialog(string title, string description, MessageBoxImage image, Exception exception)
         {
             InitializeComponent();
 
-            TitleTextBlock.Text = string.Format(Bloxstrap.Resources.Strings.Dialog_Connectivity_UnableToConnect, targetName);
-            DescriptionTextBlock.Text = description;
+            string? iconFilename = null;
+            SystemSound? sound = null;
+
+            switch (image)
+            {
+                case MessageBoxImage.Error:
+                    iconFilename = "Error";
+                    sound = SystemSounds.Hand;
+                    break;
+
+                case MessageBoxImage.Question:
+                    iconFilename = "Question";
+                    sound = SystemSounds.Question;
+                    break;
+
+                case MessageBoxImage.Warning:
+                    iconFilename = "Warning";
+                    sound = SystemSounds.Exclamation;
+                    break;
+
+                case MessageBoxImage.Information:
+                    iconFilename = "Information";
+                    sound = SystemSounds.Asterisk;
+                    break;
+            }
+
+            if (iconFilename is null)
+                IconImage.Visibility = Visibility.Collapsed;
+            else
+                IconImage.Source = new BitmapImage(new Uri($"pack://application:,,,/Resources/MessageBox/{iconFilename}.png"));
+
+            TitleTextBlock.Text = title;
+            DescriptionTextBlock.MarkdownText = description;
 
             AddException(exception);
 
@@ -28,7 +61,7 @@ namespace Bloxstrap.UI.Elements.Dialogs
                 Close();
             };
 
-            SystemSounds.Hand.Play();
+            sound?.Play();
 
             Loaded += delegate
             {
